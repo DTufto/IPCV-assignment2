@@ -12,25 +12,15 @@ def recognize_text(frame):
 def process_student_card(frame):
     data = recognize_text(frame)
     student_number = ""
-    UT_position = None
 
     for i, text in enumerate(data['text']):
-        if text.startswith('s') and len(text) == 7 and text[1:].isdigit():
+        if len(text) == 7 and text[1:].isdigit():
             student_number = text
             (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-        if text.lower() == 'university of twente':
-            (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)  # Blue rectangle for 'foo'
-            UT_position = (x, y)
-
     if student_number:
         cv2.putText(frame, f"Student Number: {student_number}", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-    if UT_position:
-        cv2.putText(frame, f"Found: UT at ({UT_position[0]}, {UT_position[1]})", (10, 70),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
     return frame
