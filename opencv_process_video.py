@@ -34,42 +34,40 @@ def main(input_video_file: str, output_video_file: str) -> None:
         if not ret:
             break
 
-        original_frame = frame.copy()
-
         # Gaussian blur to reduce noise
-        if between(cap, 1000, 3000):
-            frame = apply_gaussian_blur(frame)
+        # if between(cap, 1000, 3000):
+        #     frame = apply_gaussian_blur(frame)
+        #
+        # # Sharpen the image
+        # elif between(cap, 3000, 5000):
+        #     frame = apply_sharpening(apply_gaussian_blur(frame))
+        #
+        # # Sobel edge operator
+        # elif between(cap, 5000, 7000):
+        #     frame = apply_sobel(frame)
+        #
+        # # Canny edge operator
+        # elif between(cap, 7000, 9000):
+        #     frame = apply_canny(frame)
+        #
+        # # Show DFT spectrum
+        # elif between(cap, 9000, 11000):
+        #     frame = show_dft_spectrum(frame)
+        #
+        # # Apply low pass filter
+        # elif between(cap, 11000, 13000):
+        #     frame = apply_low_pass_filter(frame)
+        #
+        # # Apply high pass filter
+        # elif between(cap, 13000, 15000):
+        #     frame = apply_high_pass_filter(frame)
+        #
+        # # Apply band pass filter
+        # elif between(cap, 15000, 17000):
+        #     frame = apply_band_pass_filter(frame)
 
-        # Sharpen the image
-        elif between(cap, 3000, 5000):
-            frame = apply_sharpening(apply_gaussian_blur(frame))
-
-        # Sobel edge operator
-        elif between(cap, 5000, 7000):
-            frame = apply_sobel(frame)
-
-        # Canny edge operator
-        elif between(cap, 7000, 9000):
-            frame = apply_canny(frame)
-
-        # Show DFT spectrum
-        elif between(cap, 9000, 11000):
-            frame = show_dft_spectrum(original_frame)
-
-        # Apply low pass filter
-        elif between(cap, 11000, 13000):
-            frame = apply_low_pass_filter(frame)
-
-        # Apply high pass filter
-        elif between(cap, 13000, 15000):
-            frame = apply_high_pass_filter(frame)
-
-        # Apply band pass filter
-        elif between(cap, 15000, 17000):
-            frame = apply_band_pass_filter(frame)
-
-        # if between(cap, 0, 5000):  # Between 20s and 25s
-        #     frame = process_student_card(frame)
+        if between(cap, 0, 10000):  # Between 20s and 25s
+            frame = process_student_card(frame, 'templates/student_card.png')
 
         if frame.shape[1] != output_width:
             padding = np.zeros((frame_height, output_width - frame_width, 3), dtype=np.uint8)

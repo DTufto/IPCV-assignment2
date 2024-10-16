@@ -1,90 +1,48 @@
 import cv2
 import numpy as np
-import pytesseract
-from pytesseract import Output
 
 
-def recognize_text(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    threshold = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-    return pytesseract.image_to_data(threshold, output_type=Output.DICT)
+def detect_and_match_orb(image, template, min_matches=10):
+    orb = cv2.ORB_create()
+    kp1, des1 = orb.detectAndCompute(template, None)
+    kp2, des2 = orb.detectAndCompute(image, None)
 
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = bf.match(des1, des2)
+    matches = sorted(matches, key=lambda x: x.distance)
 
-def rotation_size_invariant_template_matching(image, template, scale_range=(0.5, 1.5), scale_steps=20,
-                                              rotation_range=(-180, 180), rotation_steps=36, threshold=0.7):
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray_template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    if len(matches) > min_matches:
+        src_pts = np.float32([kp1[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+        dst_pts = np.float32([kp2[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 
-    template_height, template_width = gray_template.shape
-
-    best_matches = []
-
-    scales = np.linspace(scale_range[0], scale_range[1], scale_steps)
-    angles = np.linspace(rotation_range[0], rotation_range[1], rotation_steps)
-
-    for scale in scales:
-        scaled_template = cv2.resize(gray_template, None, fx=scale, fy=scale)
-
-        for angle in angles:
-            rotation_matrix = cv2.getRotationMatrix2D((scaled_template.shape[1] / 2, scaled_template.shape[0] / 2),
-                                                      angle, 1)
-            rotated_template = cv2.warpAffine(scaled_template, rotation_matrix,
-                                              (scaled_template.shape[1], scaled_template.shape[0]))
-
-            result = cv2.matchTemplate(gray_image, rotated_template, cv2.TM_CCOEFF_NORMED)
-            locations = np.where(result >= threshold)
-
-            for pt in zip(*locations[::-1]):
-                score = result[pt[1], pt[0]]
-                best_matches.append((pt[0], pt[1], scale, angle, score))
-
-    best_matches.sort(key=lambda x: x[4], reverse=True)
-    final_matches = []
-
-    while best_matches:
-        current_match = best_matches.pop(0)
-        final_matches.append(current_match)
-
-        best_matches = [
-            match for match in best_matches
-            if abs(match[0] - current_match[0]) > template_width // 2 or
-               abs(match[1] - current_match[1]) > template_height // 2
-        ]
-
-    return final_matches
-
-
-def recognize_logo(frame, template_path='templates/UT_Logo_Black_EN.png'):
-    template = cv2.imread(template_path)
-    matches = rotation_size_invariant_template_matching(frame, template, scale_range=(0.1, 1.0), threshold=0.6)
-
-    if matches:
-        best_match = matches[0]
-        x, y, scale, angle, score = best_match
+        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
         h, w = template.shape[:2]
-        box = np.int32(cv2.boxPoints(((x + w * scale / 2, y + h * scale / 2), (w * scale, h * scale), angle)))
-        return box
-    return None
+
+        pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
+        dst = cv2.perspectiveTransform(pts, M)
+
+        return dst, True
+    else:
+        return None, False
 
 
-def process_student_card(frame):
-    data = recognize_text(frame)
-    student_number = ""
+def process_student_card(frame, template_path):
+    template = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
+    if template is None:
+        raise ValueError(f"Could not read template from {template_path}")
 
-    for i, text in enumerate(data['text']):
-        if len(text) == 7 and text[1:].isdigit():
-            student_number = text
-            (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    template_name = template_path.split('/')[-1].split('.')[0]
 
-    if student_number:
-        cv2.putText(frame, f"Student Number: {student_number}", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    card_corners, detected = detect_and_match_orb(frame_gray, template)
 
-    logo_box = recognize_logo(frame)
-    if logo_box is not None:
-        cv2.drawContours(frame, [logo_box], 0, (255, 0, 0), 2)
-        cv2.putText(frame, "Logo Detected", (logo_box[0][0], logo_box[0][1] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
+    if not detected:
+        cv2.putText(frame, f"{template_name} Not Detected", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+        return frame
 
+    cv2.polylines(frame, [np.int32(card_corners)], True, (0, 255, 0), 3, cv2.LINE_AA)
+
+    cv2.putText(frame, f"{template_name} Detected", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
     return frame
