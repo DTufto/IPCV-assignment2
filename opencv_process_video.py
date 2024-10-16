@@ -2,7 +2,7 @@ import cv2
 import argparse
 import sys
 import numpy as np
-from student_card import process_student_card
+from student_card import process_student_card, recognize_student_number
 from edge_detection import apply_canny, apply_sobel
 from blur_enhance import apply_gaussian_blur, apply_sharpening
 from fourier_transformations import (
@@ -66,8 +66,11 @@ def main(input_video_file: str, output_video_file: str) -> None:
         # elif between(cap, 15000, 17000):
         #     frame = apply_band_pass_filter(frame)
 
-        if between(cap, 0, 10000):  # Between 20s and 25s
-            frame = process_student_card(frame, 'templates/student_card.png')
+        if between(cap, 0, 5000):  # Between 20s and 25s
+            frame = process_student_card(frame, 'templates/student_card.png', 'templates/student_photo.png')
+
+        if between(cap, 5000, 10000):
+            frame = recognize_student_number(frame)
 
         if frame.shape[1] != output_width:
             padding = np.zeros((frame_height, output_width - frame_width, 3), dtype=np.uint8)
