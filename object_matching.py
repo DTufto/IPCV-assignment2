@@ -77,11 +77,9 @@ def match_objects(objects1, keypoints1, objects2, keypoints2, frame1, frame2):
 
 def draw_objects(frame1, frame2, objects1, objects2, matched_objects, colors):
     for (i, j), color in zip(matched_objects, colors):
-        # Draw contours
         cv2.drawContours(frame1, [objects1[i]], 0, color, 2)
         cv2.drawContours(frame2, [objects2[j]], 0, color, 2)
 
-        # Calculate centroid of objects
         M1 = cv2.moments(objects1[i])
         M2 = cv2.moments(objects2[j])
 
@@ -91,7 +89,6 @@ def draw_objects(frame1, frame2, objects1, objects2, matched_objects, colors):
             cx2 = int(M2['m10'] / M2['m00'])
             cy2 = int(M2['m01'] / M2['m00'])
 
-            # Draw line between centroids
             cv2.line(frame1, (cx1, cy1), (frame1.shape[1], cy1), color, 2)
             cv2.line(frame2, (0, cy2), (cx2, cy2), color, 2)
 
