@@ -7,9 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-opencv-python = "^4.10.0.84"
 pytesseract = "^0.3.13"
 matplotlib = "^3.9.2"
+opencv-contrib-python = "^4.10.0.84"
+scikit-learn = "^1.5.2"
 
 
 [build-system]

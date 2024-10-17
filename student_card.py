@@ -49,7 +49,7 @@ def detect_and_match_orb(image, template, min_matches=10):
 def detect_photo_in_card(card_image, photo_template):
     card_gray = cv2.cvtColor(card_image, cv2.COLOR_BGR2GRAY)
     photo_gray = cv2.cvtColor(photo_template, cv2.COLOR_BGR2GRAY)
-    scale_factors = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5]
+    scale_factors = np.arange(0.5, 4.6, 0.1)
 
     best_match = None
     best_scale = None
@@ -67,12 +67,10 @@ def detect_photo_in_card(card_image, photo_template):
             best_match = max_loc
             best_scale = scale
 
-    if best_val > 0.5:
-        h, w = photo_template.shape[:2]
+    h, w = photo_template.shape[:2]
+    if best_scale:
         return best_match, (int(h * best_scale), int(w * best_scale))
-    else:
-        return None, None
-
+    return None, None
 
 def process_student_card(frame, card_template_path, photo_template_path):
     card_template = cv2.imread(card_template_path, cv2.IMREAD_GRAYSCALE)
@@ -119,3 +117,29 @@ def process_student_card(frame, card_template_path, photo_template_path):
     cv2.putText(frame, f"{card_template_name} Detected", (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
     return frame
+
+
+def apply_optical_flow(prev_frame, curr_frame):
+    if prev_frame.shape != curr_frame.shape:
+        curr_frame = cv2.resize(curr_frame, (prev_frame.shape[1], prev_frame.shape[0]))
+
+    prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
+    curr_gray = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2GRAY)
+
+    flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+    magnitude, angle = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+
+    mask = np.zeros_like(curr_frame)
+    mask[..., 2] = 255
+    mask[..., 2] = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)
+
+    rgb = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2RGB)
+    result = cv2.add(rgb, mask)
+
+    step = 16
+    for y in range(0, curr_frame.shape[0], step):
+        for x in range(0, curr_frame.shape[1], step):
+            fx, fy = flow[y, x]
+            cv2.arrowedLine(result, (x, y), (int(x + fx), int(y + fy)), (0, 255, 0), 1, tipLength=0.5)
+
+    return cv2.cvtColor(result, cv2.COLOR_RGB2BGR)

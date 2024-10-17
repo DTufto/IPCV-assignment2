@@ -21,6 +21,7 @@ def show_dft_spectrum(frame):
     height, width = frame.shape[:2]
     magnitude_spectrum_image_resized = cv2.resize(magnitude_spectrum_image, (height, height))
     title = "Magnitude Spectrum"
+    frame = cv2.resize(frame, (width - height, height))
     cv2.putText(magnitude_spectrum_image_resized, title, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
     combined = np.hstack((frame, magnitude_spectrum_image_resized))
 

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def apply_gaussian_blur(frame, kernel_size=(5, 5), sigma=0):
+def apply_gaussian_blur(frame, kernel_size=(5, 5), sigma=3):
     return cv2.GaussianBlur(frame, kernel_size, sigma)
 
 
